@@ -1,9 +1,16 @@
 package cse4A;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
 import java.util.Random;
 
 public class GameBoard {
@@ -14,18 +21,69 @@ public class GameBoard {
 	private boolean dead,won;
 	private BufferedImage gameBoard,finalBoard;
 	private int x,y;
+	private int score=0;
+	private int highScore=0;
+	private Font scoreFont;
 	private static int SPACING=10;
 	public static int BOARD_WIDTH=(COLS+1)*SPACING+COLS*Tile.WIDTH;
 	public static int BOARD_HEIGHT=(ROWS+1)*SPACING+ROWS*Tile.HEIGHT;
 	private boolean hasStarted;
+	private String saveDataPath;
+	private String fileName="SaveData";
 	public GameBoard(int x,int y) {
+		try {
+			saveDataPath=GameBoard.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		scoreFont=Game.main.deriveFont(24f);
 		this.x=x;
 		this.y=y;
 		board=new Tile[ROWS][COLS];
 		gameBoard=new BufferedImage(BOARD_WIDTH,BOARD_HEIGHT,BufferedImage.TYPE_INT_RGB);
 		finalBoard=new BufferedImage(BOARD_WIDTH,BOARD_HEIGHT,BufferedImage.TYPE_INT_RGB);
+		loadHighScore();
 		createBoardImage();
 		start();
+	}
+	private void createSaveData() {
+		try {
+			File file=new File(saveDataPath,fileName);
+			FileWriter output=new FileWriter(file);
+			BufferedWriter writer=new BufferedWriter(output);
+			writer.write("0");
+			writer.close();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	private void loadHighScore() {	
+		try {
+			File f=new File(saveDataPath,fileName);
+			if(!f.isFile())
+				createSaveData();
+			BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+			highScore=Integer.parseInt(reader.readLine());
+			reader.close();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	private void setHighScore() {
+		FileWriter output=null;
+		try {
+			File f=new File(saveDataPath,fileName);
+			output=new FileWriter(f);
+			BufferedWriter writer=new BufferedWriter(output);
+			writer.write(""+highScore);
+			writer.close();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 	private void createBoardImage() {
 		Graphics2D g=(Graphics2D) gameBoard.getGraphics();
@@ -59,7 +117,7 @@ public class GameBoard {
 				notValid=false;
 			}
 		}
-		
+
 	}
 	private int getTileY(int row) {
 		return SPACING+row*Tile.WIDTH+row*SPACING;
@@ -80,9 +138,16 @@ public class GameBoard {
 		}
 		g.drawImage(finalBoard,x,y,null);
 		g2d.dispose();
+		g.setColor(Color.lightGray);
+		g.setFont(scoreFont);
+		g.drawString(""+score, 30, 40);
+		g.setColor(Color.red);
+		g.drawString("Best: "+highScore,Game.WIDTH-DrawUtils.getMessageWidth("Best: ", scoreFont, g)-80,40);
 	}
 	public void update(){
 		checkKeys();
+		if(score>=highScore)
+			highScore=score;
 		for(int row=0;row<ROWS;row++) {
 			for(int col=0;col<COLS;col++) {
 				Tile current=board[row][col];
@@ -137,7 +202,7 @@ public class GameBoard {
 				hasStarted=true;
 		}
 	}
-	
+
 	private void moveTiles(Direction dir) {
 		boolean canMove=false;
 		int horizontalDirection=0;
@@ -211,6 +276,7 @@ public class GameBoard {
 			}
 		}
 		dead=true;
+		setHighScore();
 	}
 	private boolean checkSurroundingTiles(int row, int col, Tile current) {
 		if(row>0) {
@@ -220,26 +286,26 @@ public class GameBoard {
 			if(current.getValue()==check.getValue())
 				return true;
 		}
-		if(row<ROWS){
+		if(row<ROWS-1){
 			Tile check=board[row+1][col];
 			if(check==null)
 				return true;
 			if(current.getValue()==check.getValue())
-					return true;
+				return true;
 		}
 		if(col>0){
 			Tile check=board[row][col-1];
 			if(check==null)
 				return true;
 			if(current.getValue()==check.getValue())
-					return true;
+				return true;
 		}
 		if(col<COLS-1){
 			Tile check=board[row][col+1];
 			if(check==null)
 				return true;
 			if(current.getValue()==check.getValue())
-					return true;
+				return true;
 		}
 		return false;
 	}
@@ -269,6 +335,7 @@ public class GameBoard {
 				board[newRow-verticalDirection][newCol-horizontalDirection]=null;
 				board[newRow][newCol].setSlideTo(new Point(newRow,newCol));
 				//board[newRow][newCol].setCombineAnimation(true);
+				score+=board[newRow][newCol].getValue();
 			}
 			else
 				move=false;
@@ -280,10 +347,10 @@ public class GameBoard {
 			return col<0;
 		else if(dir==Direction.RIGHT)
 			return col>COLS-1;
-		else if(dir==Direction.UP)
-			return row<0;
-		else if(dir==Direction.DOWN)
-			return row>ROWS-1;
-		return false;
+			else if(dir==Direction.UP)
+				return row<0;
+			else if(dir==Direction.DOWN)
+				return row>ROWS-1;
+			return false;
 	}
 }
