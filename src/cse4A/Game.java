@@ -20,9 +20,6 @@ public class Game extends JPanel implements KeyListener, Runnable {
 	private boolean running;
 	private BufferedImage image=new BufferedImage(WIDTH,HEIGHT,BufferedImage.TYPE_INT_RGB);
 	private GameBoard board;
-	private long startTime;
-	private long elapsed;
-	private boolean set;
 	
 	public Game() {
 		setFocusable(true);
